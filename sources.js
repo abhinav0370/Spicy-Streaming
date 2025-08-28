@@ -70,14 +70,5 @@ const availableSources = [
             movie: 'https://player.vidzee.wtf/embed/movie/{id}', // @ambr0sial: there is a 4K endpoint for movies only. in case you want to implement that sometime: https://player.vidzee.wtf/embed/movie/4k/{id}
             tv: 'https://player.vidzee.wtf/embed/tv/{id}/{season}/{episode}'
         }
-    },
-    {
-        id: 'uembed',
-        name: 'UEmbed (premium)',
-        isFrench: false,
-        urls: {
-            movie: 'https://uembed.site/?id={id}&apikey=thisisforsurenotapremiumkey_right?',
-            tv: 'https://uembed.site/?id={id}&season={season}&episode={episode}&apikey=thisisforsurenotapremiumkey_right?'
-        }
     }
 ];

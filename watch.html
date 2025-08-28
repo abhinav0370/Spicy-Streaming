@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch - Content Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.10.3/cdn.min.js" defer></script>
+    <script src="sources.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    backgroundColor: {
+                        'amoled': '#000000',
+                        'amoled-light': '#0A0A0A',
+                        'amoled-card': '#121212',
+                    },
+                    borderColor: {
+                        'amoled-border': '#1A1A1A',
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        .player-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .player-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .source-button {
+            transition: all 0.3s ease;
+        }
+
+        .source-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .source-button.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .episode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .episode-card {
+            transition: all 0.3s ease;
+        }
+
+        .episode-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .episode-card.active {
+            border: 2px solid #3b82f6;
+        }
+    </style>
+</head>
+
+<body class="bg-amoled min-h-screen text-white" x-data="watchApp()">
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="w-full">
+            <!-- Main Content -->
+            <div class="w-full space-y-6">
+                <!-- Video Player -->
+                <div class="bg-amoled-card rounded-lg shadow-lg overflow-hidden border border-amoled-border">
+                    <div class="player-container">
+                        <iframe x-bind:src="currentVideoUrl" allowfullscreen></iframe>
+                    </div>
+                </div>
+
+                <!-- Episode Selector (for TV shows) -->
+                <div x-show="isShow" class="bg-amoled-card rounded-lg shadow-lg p-6 border border-amoled-border">
+                    <h2 class="text-xl font-bold mb-4 text-white">Episodes</h2>
+
+                    <!-- Season Selector -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Season</label>
+                        <select x-model="selectedSeason" @change="loadEpisodes()"
+                            class="w-full px-3 py-2 border border-amoled-border rounded-md bg-amoled-light text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <template x-for="season in seasons" :key="season">
+                                <option :value="season" x-text="'Season ' + season"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Episodes Grid -->
+                    <div class="episode-grid" x-show="episodes.length > 0">
+                        <template x-for="episode in episodes" :key="episode.episode_number">
+                            <div class="episode-card bg-amoled-light rounded-lg p-4 cursor-pointer border border-amoled-border hover:bg-amoled-card transition-colors"
+                                :class="selectedEpisode === episode.episode_number ? 'active border-blue-500 bg-amoled-card' : ''"
+                                @click="selectEpisode(episode.episode_number)">
+                                <div class="aspect-video mb-3 bg-gray-600 rounded flex items-center justify-center">
+                                    <img :src="episode.still_path ? 'https://image.tmdb.org/t/p/w300' + episode.still_path : 'https://via.placeholder.com/300x169?text=Episode+' + episode.episode_number"
+                                        :alt="'Episode ' + episode.episode_number"
+                                        class="w-full h-full object-cover rounded"
+                                        @error="event => { event.target.src = 'https://via.placeholder.com/300x169?text=Episode+' + episode.episode_number; }">
+                                </div>
+                                <h3 class="font-medium text-sm mb-1 text-white"
+                                    x-text="'Episode ' + episode.episode_number + ': ' + episode.name"></h3>
+                                <p class="text-xs text-gray-400 line-clamp-2"
+                                    x-text="episode.overview || 'No description available.'"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Source Selector -->
+                <div class="bg-amoled-card rounded-lg shadow-lg p-6 border border-amoled-border">
+                    <h2 class="text-xl font-bold mb-4 text-white">Streaming Sources</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <template x-for="source in availableSources" :key="source.id">
+                            <button
+                                class="source-button px-4 py-2 rounded-md border border-amoled-border hover:border-blue-500 bg-amoled-light text-gray-300 hover:text-white transition-all"
+                                :class="selectedSource === source.id ? 'active bg-blue-600 border-blue-500 text-white' : ''"
+                                @click="changeSource(source.id)" x-text="source.name">
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function watchApp() {
+            return {
+                content: null,
+                contentId: null,
+                contentType: null,
+                isShow: false,
+                selectedSeason: 1,
+                selectedEpisode: 1,
+                seasons: [],
+                episodes: [],
+                selectedSource: 'multiembed',
+                availableSources: availableSources,
+                currentVideoUrl: '',
+                // Playback tracking
+                playbackStarted: false,
+                playbackTimer: null,
+                minWatchTime: 30000, // 30 seconds
+                hasConfirmedPlayback: false,
+
+                init() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    this.contentId = urlParams.get('id');
+                    this.contentType = urlParams.get('type');
+                    const defaultSource = urlParams.get('defaultSource');
+
+                    if (this.contentId && this.contentType) {
+                        this.isShow = this.contentType === 'tv';
+                        // Use default source if provided, otherwise use multiembed
+                        this.selectedSource = defaultSource || 'multiembed';
+                        this.loadContent();
+
+                        // Setup playback tracking after content loads
+                        setTimeout(() => {
+                            this.setupPlaybackTracking();
+                        }, 2000);
+
+                        // Cleanup on page unload
+                        window.addEventListener('beforeunload', () => {
+                            this.stopPlaybackTracking();
+                        });
+                    }
+                }, async loadContent() {
+                    try {
+                        const response = await fetch(`https://api.themoviedb.org/3/${this.contentType}/${this.contentId}?api_key=1070730380f5fee0d87cf0382670b255`);
+                        const data = await response.json();
+                        this.content = data;
+
+                        if (this.isShow) {
+                            this.seasons = Array.from({ length: data.number_of_seasons }, (_, i) => i + 1);
+                            this.loadEpisodes();
+                        } else {
+                            this.updateVideoUrl();
+                        }
+                    } catch (error) {
+                        console.error('Error loading content:', error);
+                    }
+                },
+
+                async loadEpisodes() {
+                    try {
+                        const response = await fetch(`https://api.themoviedb.org/3/tv/${this.contentId}/season/${this.selectedSeason}?api_key=1070730380f5fee0d87cf0382670b255`);
+                        const data = await response.json();
+                        this.episodes = data.episodes || [];
+                        this.selectedEpisode = 1;
+                        this.updateVideoUrl();
+                    } catch (error) {
+                        console.error('Error loading episodes:', error);
+                    }
+                },
+
+                selectEpisode(episodeNumber) {
+                    this.selectedEpisode = episodeNumber;
+                    this.updateVideoUrl();
+                },
+
+                changeSource(sourceId) {
+                    this.selectedSource = sourceId;
+                    this.updateVideoUrl();
+                },
+
+                updateVideoUrl() {
+                    const source = this.availableSources.find(s => s.id === this.selectedSource);
+                    if (!source) return;
+
+                    const params = this.isShow
+                        ? { id: this.contentId, season: this.selectedSeason, episode: this.selectedEpisode }
+                        : { id: this.contentId };
+
+                    let url = this.isShow ? source.urls.tv : source.urls.movie;
+
+                    Object.entries(params).forEach(([key, value]) => {
+                        url = url.replace(`{${key}}`, value);
+                    });
+
+                    this.currentVideoUrl = url;
+
+                    // Reset playback tracking for new video
+                    this.hasConfirmedPlayback = false;
+                    this.stopPlaybackTracking();
+
+                    // Setup tracking for new video
+                    this.setupPlaybackTracking();
+                },
+
+                // Playback tracking functions
+                startPlaybackTracking() {
+                    if (this.hasConfirmedPlayback) return;
+
+                    this.playbackStarted = true;
+
+                    // Set timer for minimum watch time
+                    this.playbackTimer = setTimeout(() => {
+                        this.confirmPlayback();
+                    }, this.minWatchTime);
+
+                    console.log('Started playback tracking for:', this.content?.title || this.content?.name);
+                },
+
+                stopPlaybackTracking() {
+                    if (this.playbackTimer) {
+                        clearTimeout(this.playbackTimer);
+                        this.playbackTimer = null;
+                    }
+                    this.playbackStarted = false;
+                },
+
+                confirmPlayback() {
+                    if (this.hasConfirmedPlayback) return;
+
+                    this.hasConfirmedPlayback = true;
+                    this.stopPlaybackTracking();
+
+                    // Send data to index.html
+                    const continueWatchingData = {
+                        id: this.contentId,
+                        title: this.content.title || this.content.name,
+                        media_type: this.contentType,
+                        poster_path: this.content.poster_path,
+                        release_date: this.content.release_date || this.content.first_air_date,
+                        vote_average: this.content.vote_average
+                    };
+
+                    localStorage.setItem('streamSearch_continueWatching_update', JSON.stringify(continueWatchingData));
+
+                    console.log('Playback confirmed, added to Continue Watching:', continueWatchingData.title);
+                },
+
+                setupPlaybackTracking() {
+                    // Wait for iframe to load
+                    setTimeout(() => {
+                        const iframe = document.querySelector('.player-container iframe');
+                        if (iframe) {
+                            iframe.addEventListener('load', () => {
+                                console.log('Video iframe loaded, starting playback tracking');
+                                // Start tracking when iframe loads (indicates video is ready)
+                                this.startPlaybackTracking();
+                            });
+
+                            // Also start tracking if iframe already has a src
+                            if (iframe.src && iframe.src !== 'about:blank') {
+                                this.startPlaybackTracking();
+                            }
+                        }
+                    }, 1000);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

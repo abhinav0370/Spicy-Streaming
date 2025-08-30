@@ -89,7 +89,9 @@
         }
 
         .card-hover:hover {
-            transform: translateY(-8px) scale(1.02);
+            /* Remove vertical lift to avoid cards touching the viewport/container edges on hover.
+               Keep a slight scale for the hover emphasis. */
+            transform: scale(1.02);
             box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.5);
         }
 
@@ -153,6 +155,95 @@
             animation-delay: 0.3s;
         }
     </style>
+    <style>
+        .horizontal-scroll {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 0 1rem;
+            overscroll-behavior-x: contain;
+        }
+
+        .horizontal-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scroll-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid transparent;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+        }
+
+        .scroll-arrow:hover {
+            opacity: 1;
+            background: transparent;
+            border-color: #3b82f6;
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+
+        .scroll-arrow:active {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+
+        .scroll-arrow.left {
+            left: -60px;
+        }
+
+        .scroll-arrow.right {
+            right: -60px;
+        }
+
+        .scroll-container {
+            position: relative;
+            margin: 0 -1rem;
+        }
+
+        .card-fixed {
+            flex: 0 0 180px;
+            min-width: 180px;
+        }
+
+        @media (min-width: 640px) {
+            .card-fixed {
+                flex: 0 0 200px;
+                min-width: 200px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .card-fixed {
+                flex: 0 0 220px;
+                min-width: 220px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .card-fixed {
+                flex: 0 0 240px;
+                min-width: 240px;
+            }
+        }
+    </style>
 </head>
 
 <body class="bg-amoled min-h-screen text-white" x-data="searchApp()">
@@ -179,41 +270,55 @@
 
         <!-- Results -->
         <div x-show="results.length > 0 && !isLoading" class="max-w-7xl mx-auto">
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 md:gap-8">
-                <template x-for="item in results" :key="item.id">
-                    <div class="card-hover bg-amoled-card rounded-lg overflow-hidden shadow-lg cursor-pointer border border-amoled-border"
-                        @click="watchContent(item)">
-                        <div class="aspect-[2/3] relative">
-                            <img :src="'https://image.tmdb.org/t/p/w500' + item.poster_path"
-                                :alt="item.title || item.name" class="w-full h-full object-cover" @error="event => {
-                                    event.target.src = 'https://via.placeholder.com/300x450?text=No+Image';
-                                }">
-                            <div class="card-overlay absolute inset-0 flex flex-col justify-end p-2 sm:p-3 md:p-4">
-                                <h3 class="text-sm md:text-lg font-semibold" x-text="item.title || item.name"></h3>
-                                <p class="text-gray-400 text-xs md:text-sm mt-1"
-                                    x-text="'⭐ ' + (item.vote_average ? item.vote_average.toFixed(1) : 'N/A') + '/10'">
-                                </p>
-                            </div>
-                            <div class="absolute top-2 right-2 flex space-x-2 z-20">
-                                <span
-                                    class="inline-flex items-center justify-center bg-black bg-opacity-75 text-white text-xs px-2 py-0.5 rounded z-10">
-                                    <span x-text="item.media_type === 'movie' ? 'MOVIE' : 'TV'"></span>
-                                </span>
-                                <button @click.stop.prevent="toggleWatchlist(item)"
-                                    class="bg-black bg-opacity-75 hover:bg-opacity-90 text-white p-1.5 sm:p-2 rounded-full transition-all z-20 relative cursor-pointer"
-                                    :class="isInWatchlist(item.id) ? 'text-yellow-400' : 'text-white'">
-                                    <svg xmlns="http://www.w3.org/2000/svg"
-                                        class="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none"
-                                        :fill="isInWatchlist(item.id) ? 'currentColor' : 'none'" viewBox="0 0 24 24"
-                                        stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 4v16m8-8H4" />
-                                    </svg>
-                                </button>
+            <h2 class="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">Search Results</h2>
+            <div class="scroll-container">
+                <button @click="scrollLeft('results-container')" class="scroll-arrow left">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                        </path>
+                    </svg>
+                </button>
+                <button @click="scrollRight('results-container')" class="scroll-arrow right">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+                <div id="results-container" class="horizontal-scroll">
+                    <template x-for="item in results" :key="item.id">
+                        <div class="card-fixed">
+                            <div class="card-hover bg-amoled-card rounded-lg overflow-hidden shadow-lg cursor-pointer border border-amoled-border"
+                                @click="watchContent(item)">
+                                <div class="aspect-[2/3] relative">
+                                    <img :src="'https://image.tmdb.org/t/p/w500' + item.poster_path"
+                                        :alt="item.title || item.name" class="w-full h-full object-cover" @error="event => {
+                                            event.target.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                                        }">
+                                    <div
+                                        class="card-overlay absolute inset-0 flex flex-col justify-end p-2 sm:p-3 md:p-4">
+                                        <h3 class="text-sm md:text-lg font-semibold" x-text="item.title || item.name">
+                                        </h3>
+                                        <p class="text-gray-400 text-xs md:text-sm mt-1"
+                                            x-text="'⭐ ' + (item.vote_average ? item.vote_average.toFixed(1) : 'N/A') + '/10'">
+                                        </p>
+                                    </div>
+                                    <div class="absolute top-2 right-2 flex space-x-2 z-20">
+                                        <button @click.stop.prevent="toggleWatchlist(item)"
+                                            class="bg-black bg-opacity-75 hover:bg-opacity-90 text-white p-1.5 sm:p-2 rounded-full transition-all z-20 relative cursor-pointer"
+                                            :class="isInWatchlist(item.id) ? 'text-yellow-400' : 'text-white'">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none"
+                                                :fill="isInWatchlist(item.id) ? 'currentColor' : 'none'"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 4v16m8-8H4" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </template>
+                    </template>
+                </div>
             </div>
         </div>
 
@@ -221,39 +326,52 @@
         <div x-show="showWatchlist && watchlist.length > 0"
             class="max-w-7xl mx-auto mt-8 sm:mt-12 fade-in fade-in-delay-1">
             <h2 class="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">My Watchlist</h2>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 md:gap-8">
-                <template x-for="item in watchlist" :key="item.id">
-                    <div class="card-hover bg-amoled-card rounded-lg overflow-hidden shadow-lg cursor-pointer border border-amoled-border"
-                        @click="watchContent(item)">
-                        <div class="aspect-[2/3] relative">
-                            <img :src="'https://image.tmdb.org/t/p/w500' + item.poster_path" :alt="item.title"
-                                class="w-full h-full object-cover" @error="event => {
-                                    event.target.src = 'https://via.placeholder.com/300x450?text=No+Image';
-                                }">
-                            <div class="card-overlay absolute inset-0 flex flex-col justify-end p-2 sm:p-3 md:p-4">
-                                <h3 class="text-sm md:text-lg font-semibold" x-text="item.title || item.name"></h3>
-                                <p class="text-gray-400 text-xs md:text-sm mt-1"
-                                    x-text="'⭐ ' + (item.vote_average ? item.vote_average.toFixed(1) : 'N/A') + '/10'">
-                                </p>
-                            </div>
-                            <div class="absolute top-2 right-2 flex space-x-2 z-20">
-                                <span
-                                    class="inline-flex items-center justify-center bg-black bg-opacity-75 text-white text-xs px-2 py-0.5 rounded z-10">
-                                    <span x-text="item.media_type === 'movie' ? 'MOVIE' : 'TV'"></span>
-                                </span>
-                                <button @click.stop.prevent="toggleWatchlist(item)"
-                                    class="bg-red-600 hover:bg-red-700 text-white p-1.5 sm:p-2 rounded-full transition-all z-20 relative cursor-pointer">
-                                    <svg xmlns="http://www.w3.org/2000/svg"
-                                        class="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
+            <div class="scroll-container">
+                <button @click="scrollLeft('watchlist-container')" class="scroll-arrow left">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                        </path>
+                    </svg>
+                </button>
+                <button @click="scrollRight('watchlist-container')" class="scroll-arrow right">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+                <div id="watchlist-container" class="horizontal-scroll">
+                    <template x-for="item in watchlist" :key="item.id">
+                        <div class="card-fixed">
+                            <div class="card-hover bg-amoled-card rounded-lg overflow-hidden shadow-lg cursor-pointer border border-amoled-border"
+                                @click="watchContent(item)">
+                                <div class="aspect-[2/3] relative">
+                                    <img :src="'https://image.tmdb.org/t/p/w500' + item.poster_path" :alt="item.title"
+                                        class="w-full h-full object-cover" @error="event => {
+                                            event.target.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                                        }">
+                                    <div
+                                        class="card-overlay absolute inset-0 flex flex-col justify-end p-2 sm:p-3 md:p-4">
+                                        <h3 class="text-sm md:text-lg font-semibold" x-text="item.title || item.name">
+                                        </h3>
+                                        <p class="text-gray-400 text-xs md:text-sm mt-1"
+                                            x-text="'⭐ ' + (item.vote_average ? item.vote_average.toFixed(1) : 'N/A') + '/10'">
+                                        </p>
+                                    </div>
+                                    <div class="absolute top-2 right-2 flex space-x-2 z-20">
+                                        <button @click.stop.prevent="toggleWatchlist(item)"
+                                            class="bg-red-600 hover:bg-red-700 text-white p-1.5 sm:p-2 rounded-full transition-all z-20 relative cursor-pointer">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </template>
+                    </template>
+                </div>
             </div>
         </div>
 
@@ -261,39 +379,190 @@
         <div x-show="showContinueWatching && continueWatching.length > 0"
             class="max-w-7xl mx-auto mt-8 sm:mt-12 fade-in fade-in-delay-2">
             <h2 class="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">Continue Watching</h2>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 md:gap-8">
-                <template x-for="item in continueWatching" :key="item.id">
-                    <div class="card-hover bg-amoled-card rounded-lg overflow-hidden shadow-lg cursor-pointer border border-amoled-border"
-                        @click="watchContent(item)">
-                        <div class="aspect-[2/3] relative">
-                            <img :src="'https://image.tmdb.org/t/p/w500' + item.poster_path" :alt="item.title"
-                                class="w-full h-full object-cover" @error="event => {
-                                    event.target.src = 'https://via.placeholder.com/300x450?text=No+Image';
-                                }">
-                            <div class="card-overlay absolute inset-0 flex flex-col justify-end p-2 sm:p-3 md:p-4">
-                                <h3 class="text-sm md:text-lg font-semibold" x-text="item.title || item.name"></h3>
-                                <p class="text-gray-400 text-xs md:text-sm mt-1"
-                                    x-text="'⭐ ' + (item.vote_average ? item.vote_average.toFixed(1) : 'N/A') + '/10'">
-                                </p>
-                            </div>
-                            <div class="absolute top-2 right-2 flex space-x-2 z-20">
-                                <span
-                                    class="inline-flex items-center justify-center bg-black bg-opacity-75 text-white text-xs px-2 py-0.5 rounded z-10">
-                                    <span x-text="item.media_type === 'movie' ? 'MOVIE' : 'TV'"></span>
-                                </span>
-                                <button @click.stop.prevent="removeFromContinueWatching(item.id)"
-                                    class="bg-red-600 hover:bg-red-700 text-white p-1.5 sm:p-2 rounded-full transition-all z-20 relative cursor-pointer">
-                                    <svg xmlns="http://www.w3.org/2000/svg"
-                                        class="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
+            <div class="scroll-container">
+                <button @click="scrollLeft('continue-container')" class="scroll-arrow left">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                        </path>
+                    </svg>
+                </button>
+                <button @click="scrollRight('continue-container')" class="scroll-arrow right">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+                <div id="continue-container" class="horizontal-scroll">
+                    <template x-for="item in continueWatching" :key="item.id">
+                        <div class="card-fixed">
+                            <div class="card-hover bg-amoled-card rounded-lg overflow-hidden shadow-lg cursor-pointer border border-amoled-border"
+                                @click="watchContent(item)">
+                                <div class="aspect-[2/3] relative">
+                                    <img :src="'https://image.tmdb.org/t/p/w500' + item.poster_path" :alt="item.title"
+                                        class="w-full h-full object-cover" @error="event => {
+                                            event.target.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                                        }">
+                                    <div
+                                        class="card-overlay absolute inset-0 flex flex-col justify-end p-2 sm:p-3 md:p-4">
+                                        <h3 class="text-sm md:text-lg font-semibold" x-text="item.title || item.name">
+                                        </h3>
+                                        <p class="text-gray-400 text-xs md:text-sm mt-1"
+                                            x-text="'⭐ ' + (item.vote_average ? item.vote_average.toFixed(1) : 'N/A') + '/10'">
+                                        </p>
+                                    </div>
+                                    <div class="absolute top-2 right-2 flex space-x-2 z-20">
+                                        <button @click.stop.prevent="removeFromContinueWatching(item.id)"
+                                            class="bg-red-600 hover:bg-red-700 text-white p-1.5 sm:p-2 rounded-full transition-all z-20 relative cursor-pointer">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </template>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trending -->
+        <div x-show="showTrending && getFilteredTrending().length > 0"
+            class="max-w-7xl mx-auto mt-8 sm:mt-12 fade-in fade-in-delay-3">
+            <div class="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 class="text-xl sm:text-2xl font-bold text-white">Trending</h2>
+                <div class="flex bg-amoled-light rounded-lg p-1 border border-amoled-border">
+                    <button @click="trendingType = 'movie'"
+                        :class="trendingType === 'movie' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'"
+                        class="px-3 py-1 sm:px-4 sm:py-2 rounded-md text-sm font-medium transition-all">
+                        Movies
+                    </button>
+                    <button @click="trendingType = 'tv'"
+                        :class="trendingType === 'tv' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'"
+                        class="px-3 py-1 sm:px-4 sm:py-2 rounded-md text-sm font-medium transition-all">
+                        TV Shows
+                    </button>
+                </div>
+            </div>
+            <div class="scroll-container">
+                <button @click="scrollLeft('trending-container')" class="scroll-arrow left">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                        </path>
+                    </svg>
+                </button>
+                <button @click="scrollRight('trending-container')" class="scroll-arrow right">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+                <div id="trending-container" class="horizontal-scroll">
+                    <template x-for="item in getFilteredTrending()" :key="item.id">
+                        <div class="card-fixed">
+                            <div class="card-hover bg-amoled-card rounded-lg overflow-hidden shadow-lg cursor-pointer border border-amoled-border"
+                                @click="watchContent(item)">
+                                <div class="aspect-[2/3] relative">
+                                    <img :src="'https://image.tmdb.org/t/p/w500' + item.poster_path"
+                                        :alt="item.title || item.name" class="w-full h-full object-cover" @error="event => {
+                                            event.target.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                                        }">
+                                    <div
+                                        class="card-overlay absolute inset-0 flex flex-col justify-end p-2 sm:p-3 md:p-4">
+                                        <h3 class="text-sm md:text-lg font-semibold" x-text="item.title || item.name">
+                                        </h3>
+                                        <p class="text-gray-400 text-xs md:text-sm mt-1"
+                                            x-text="'⭐ ' + (item.vote_average ? item.vote_average.toFixed(1) : 'N/A') + '/10'">
+                                        </p>
+                                    </div>
+                                    <div class="absolute top-2 right-2 flex space-x-2 z-20">
+                                        <button @click.stop.prevent="toggleWatchlist(item)"
+                                            class="bg-black bg-opacity-75 hover:bg-opacity-90 text-white p-1.5 sm:p-2 rounded-full transition-all z-20 relative cursor-pointer"
+                                            :class="isInWatchlist(item.id) ? 'text-yellow-400' : 'text-white'">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none"
+                                                :fill="isInWatchlist(item.id) ? 'currentColor' : 'none'"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 4v16m8-8H4" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- New -->
+        <div x-show="showNew && getFilteredNew().length > 0"
+            class="max-w-7xl mx-auto mt-8 sm:mt-12 fade-in fade-in-delay-3">
+            <div class="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 class="text-xl sm:text-2xl font-bold text-white">New & Popular</h2>
+                <div class="flex bg-amoled-light rounded-lg p-1 border border-amoled-border">
+                    <button @click="newType = 'movie'"
+                        :class="newType === 'movie' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'"
+                        class="px-3 py-1 sm:px-4 sm:py-2 rounded-md text-sm font-medium transition-all">
+                        Movies
+                    </button>
+                    <button @click="newType = 'tv'"
+                        :class="newType === 'tv' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'"
+                        class="px-3 py-1 sm:px-4 sm:py-2 rounded-md text-sm font-medium transition-all">
+                        TV Shows
+                    </button>
+                </div>
+            </div>
+            <div class="scroll-container">
+                <button @click="scrollLeft('new-container')" class="scroll-arrow left">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                        </path>
+                    </svg>
+                </button>
+                <button @click="scrollRight('new-container')" class="scroll-arrow right">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+                <div id="new-container" class="horizontal-scroll">
+                    <template x-for="item in getFilteredNew()" :key="item.id">
+                        <div class="card-fixed">
+                            <div class="card-hover bg-amoled-card rounded-lg overflow-hidden shadow-lg cursor-pointer border border-amoled-border"
+                                @click="watchContent(item)">
+                                <div class="aspect-[2/3] relative">
+                                    <img :src="'https://image.tmdb.org/t/p/w500' + item.poster_path"
+                                        :alt="item.title || item.name" class="w-full h-full object-cover" @error="event => {
+                                            event.target.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                                        }">
+                                    <div
+                                        class="card-overlay absolute inset-0 flex flex-col justify-end p-2 sm:p-3 md:p-4">
+                                        <h3 class="text-sm md:text-lg font-semibold" x-text="item.title || item.name">
+                                        </h3>
+                                        <p class="text-gray-400 text-xs md:text-sm mt-1"
+                                            x-text="'⭐ ' + (item.vote_average ? item.vote_average.toFixed(1) : 'N/A') + '/10'">
+                                        </p>
+                                    </div>
+                                    <div class="absolute top-2 right-2 flex space-x-2 z-20">
+                                        <button @click.stop.prevent="toggleWatchlist(item)"
+                                            class="bg-black bg-opacity-75 hover:bg-opacity-90 text-white p-1.5 sm:p-2 rounded-full transition-all z-20 relative cursor-pointer"
+                                            :class="isInWatchlist(item.id) ? 'text-yellow-400' : 'text-white'">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4 sm:h-5 sm:w-5 pointer-events-none"
+                                                :fill="isInWatchlist(item.id) ? 'currentColor' : 'none'"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 4v16m8-8H4" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
 
@@ -369,6 +638,10 @@
                 isLoading: false,
                 watchlist: [],
                 continueWatching: [],
+                trending: [],
+                new: [],
+                trendingType: 'movie', // 'movie' or 'tv'
+                newType: 'movie', // 'movie' or 'tv'
                 defaultSource: 'vidfast', // Default source
                 availableSources: availableSources,
                 apiKey: '1070730380f5fee0d87cf0382670b255',
@@ -376,11 +649,15 @@
                 showWatchlist: false,
                 showContinueWatching: false,
                 showDefaultSource: false,
+                showTrending: false,
+                showNew: false,
 
                 init() {
                     this.loadWatchlist();
                     this.loadContinueWatching();
                     this.loadDefaultSource();
+                    this.loadTrending();
+                    this.loadNew();
 
                     // Check for updates from watch.html every 2 seconds
                     setInterval(() => {
@@ -391,7 +668,12 @@
                     setTimeout(() => { this.showSearchBar = true; }, 50);
                     setTimeout(() => { this.showWatchlist = true; }, 100);
                     setTimeout(() => { this.showContinueWatching = true; }, 200);
-                    setTimeout(() => { this.showDefaultSource = true; }, 300);
+                    setTimeout(() => { this.showTrending = true; }, 300);
+                    setTimeout(() => { this.showNew = true; }, 400);
+                    setTimeout(() => { this.showDefaultSource = true; }, 500);
+
+                    // Add mouse wheel support for horizontal scrolling
+                    this.initMouseWheelScrolling();
                 }, loadWatchlist() {
                     const saved = localStorage.getItem('streamSearch_watchlist');
                     if (saved) {
@@ -470,6 +752,68 @@
                         console.warn('Error loading default source from localStorage:', error);
                         // Reset to default if localStorage fails
                         this.defaultSource = 'vidfast';
+                    }
+                },
+
+                async loadTrending() {
+                    try {
+                        // Load trending movies
+                        const movieResponse = await fetch(`https://api.themoviedb.org/3/trending/movie/day?api_key=${this.apiKey}`);
+                        const movieData = await movieResponse.json();
+                        const movies = movieData.results.slice(0, 20).map(item => ({ ...item, media_type: 'movie' }));
+
+                        // Load trending TV shows
+                        const tvResponse = await fetch(`https://api.themoviedb.org/3/trending/tv/day?api_key=${this.apiKey}`);
+                        const tvData = await tvResponse.json();
+                        const tvShows = tvData.results.slice(0, 20).map(item => ({ ...item, media_type: 'tv' }));
+
+                        // Combine and store
+                        this.trending = [...movies, ...tvShows];
+                    } catch (error) {
+                        console.error('Error loading trending content:', error);
+                        this.trending = [];
+                    }
+                },
+
+                async loadNew() {
+                    try {
+                        // Load new/popular movies
+                        const movieResponse = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${this.apiKey}`);
+                        const movieData = await movieResponse.json();
+                        const movies = movieData.results.slice(0, 20).map(item => ({ ...item, media_type: 'movie' }));
+
+                        // Load new/popular TV shows
+                        const tvResponse = await fetch(`https://api.themoviedb.org/3/tv/popular?api_key=${this.apiKey}`);
+                        const tvData = await tvResponse.json();
+                        const tvShows = tvData.results.slice(0, 20).map(item => ({ ...item, media_type: 'tv' }));
+
+                        // Combine and store
+                        this.new = [...movies, ...tvShows];
+                    } catch (error) {
+                        console.error('Error loading new content:', error);
+                        this.new = [];
+                    }
+                },
+
+                getFilteredTrending() {
+                    return this.trending.filter(item => item.media_type === this.trendingType);
+                },
+
+                getFilteredNew() {
+                    return this.new.filter(item => item.media_type === this.newType);
+                },
+
+                scrollLeft(containerId) {
+                    const container = document.getElementById(containerId);
+                    if (container) {
+                        container.scrollBy({ left: -300, behavior: 'smooth' });
+                    }
+                },
+
+                scrollRight(containerId) {
+                    const container = document.getElementById(containerId);
+                    if (container) {
+                        container.scrollBy({ left: 300, behavior: 'smooth' });
                     }
                 },
 
@@ -553,6 +897,38 @@
                 watchContent(item) {
                     const type = item.media_type === 'movie' ? 'movie' : 'tv';
                     window.location.href = `watch.html?id=${item.id}&type=${type}&defaultSource=${this.defaultSource}`;
+                },
+
+                initMouseWheelScrolling() {
+                    const scrollContainers = [
+                        'results-container',
+                        'watchlist-container',
+                        'continue-container',
+                        'trending-container',
+                        'new-container'
+                    ];
+
+                    scrollContainers.forEach(containerId => {
+                        const container = document.getElementById(containerId);
+                        if (container) {
+                            container.addEventListener('wheel', (e) => {
+                                this.handleMouseWheel(e, containerId);
+                            }, { passive: false });
+                        }
+                    });
+                },
+
+                handleMouseWheel(e, containerId) {
+                    e.preventDefault();
+                    const container = document.getElementById(containerId);
+                    if (!container) return;
+
+                    // Convert vertical scroll to horizontal scroll
+                    const scrollAmount = e.deltaY * 2; // Multiply by 2 for more responsive scrolling
+                    container.scrollBy({
+                        left: scrollAmount,
+                        behavior: 'smooth'
+                    });
                 }
             }
         }

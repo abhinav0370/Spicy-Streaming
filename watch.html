@@ -159,9 +159,22 @@
                 </div>
 
                 <!-- Source Selector -->
-                <div class="bg-amoled-card rounded-lg shadow-lg p-3 sm:p-6 border border-amoled-border">
-                    <h2 class="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-white">Streaming Sources</h2>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
+                <div class="bg-amoled-card rounded-lg shadow-lg p-3 sm:p-4 border border-amoled-border">
+                    <div class="flex items-center justify-between mb-3 sm:mb-4">
+                        <h2 class="text-lg sm:text-xl font-bold text-white">Streaming Sources</h2>
+                        <button @click="showSources = !showSources"
+                            class="text-gray-300 hover:text-white p-1 rounded focus:outline-none"
+                            :aria-expanded="showSources">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div x-show="showSources" x-transition
+                        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
                         <template x-for="source in availableSources" :key="source.id">
                             <button
                                 class="source-button px-2 py-2 sm:px-4 sm:py-2 rounded-md border border-amoled-border hover:border-blue-500 bg-amoled-light text-gray-300 hover:text-white transition-all text-xs sm:text-sm"
@@ -187,6 +200,7 @@
                 seasons: [],
                 episodes: [],
                 selectedSource: 'multiembed',
+                showSources: false,
                 availableSources: availableSources,
                 currentVideoUrl: '',
                 // Playback tracking
@@ -253,6 +267,8 @@
 
                 changeSource(sourceId) {
                     this.selectedSource = sourceId;
+                    // Auto-close the sources panel after selection
+                    this.showSources = false;
                     this.updateVideoUrl();
                 },
 
@@ -315,7 +331,8 @@
                         media_type: this.contentType,
                         poster_path: this.content.poster_path,
                         release_date: this.content.release_date || this.content.first_air_date,
-                        vote_average: this.content.vote_average
+                        vote_average: this.content.vote_average,
+                        overview: this.content.overview
                     };
 
                     localStorage.setItem('streamSearch_continueWatching_update', JSON.stringify(continueWatchingData));

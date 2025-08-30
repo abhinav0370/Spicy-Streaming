@@ -272,17 +272,6 @@
         <div x-show="results.length > 0 && !isLoading" class="max-w-7xl mx-auto">
             <h2 class="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">Search Results</h2>
             <div class="scroll-container">
-                <button @click="scrollLeft('results-container')" class="scroll-arrow left">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
-                        </path>
-                    </svg>
-                </button>
-                <button @click="scrollRight('results-container')" class="scroll-arrow right">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
                 <div id="results-container" class="horizontal-scroll">
                     <template x-for="item in results" :key="item.id">
                         <div class="card-fixed">
@@ -327,17 +316,6 @@
             class="max-w-7xl mx-auto mt-8 sm:mt-12 fade-in fade-in-delay-1">
             <h2 class="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">My Watchlist</h2>
             <div class="scroll-container">
-                <button @click="scrollLeft('watchlist-container')" class="scroll-arrow left">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
-                        </path>
-                    </svg>
-                </button>
-                <button @click="scrollRight('watchlist-container')" class="scroll-arrow right">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
                 <div id="watchlist-container" class="horizontal-scroll">
                     <template x-for="item in watchlist" :key="item.id">
                         <div class="card-fixed">
@@ -380,17 +358,6 @@
             class="max-w-7xl mx-auto mt-8 sm:mt-12 fade-in fade-in-delay-2">
             <h2 class="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">Continue Watching</h2>
             <div class="scroll-container">
-                <button @click="scrollLeft('continue-container')" class="scroll-arrow left">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
-                        </path>
-                    </svg>
-                </button>
-                <button @click="scrollRight('continue-container')" class="scroll-arrow right">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
                 <div id="continue-container" class="horizontal-scroll">
                     <template x-for="item in continueWatching" :key="item.id">
                         <div class="card-fixed">
@@ -447,17 +414,6 @@
                 </div>
             </div>
             <div class="scroll-container">
-                <button @click="scrollLeft('trending-container')" class="scroll-arrow left">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
-                        </path>
-                    </svg>
-                </button>
-                <button @click="scrollRight('trending-container')" class="scroll-arrow right">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
                 <div id="trending-container" class="horizontal-scroll">
                     <template x-for="item in getFilteredTrending()" :key="item.id">
                         <div class="card-fixed">
@@ -516,17 +472,6 @@
                 </div>
             </div>
             <div class="scroll-container">
-                <button @click="scrollLeft('new-container')" class="scroll-arrow left">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
-                        </path>
-                    </svg>
-                </button>
-                <button @click="scrollRight('new-container')" class="scroll-arrow right">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
                 <div id="new-container" class="horizontal-scroll">
                     <template x-for="item in getFilteredNew()" :key="item.id">
                         <div class="card-fixed">
